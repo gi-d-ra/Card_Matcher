@@ -6,17 +6,37 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.concurrent.ConcurrentHashMap;
 
+/*
+ * In the screenshot in the center of the poker table there are several cards.
+ * By comparing several pixels of the cards program determines
+ * what card cards are there and prints info about them to the console.
+ *
+ * (Using multithreading)
+ *
+ * Suits:
+ * d - diamonds
+ * h - hearts
+ * s - spades
+ * c - clubs
+ *
+ * (All screenshots in the directory /resources/imgs)
+ */
+
 public class Main {
 
+    //map for result
     static final ConcurrentHashMap<Integer, String> map = new ConcurrentHashMap<>();
-    static final ConcurrentHashMap<Integer, Integer> resMap = new ConcurrentHashMap<>();
-    static BufferedImage img_cut;
-    static volatile int flag;
 
+    //image part with cards
+    static BufferedImage img_cut;
+
+    //list with all threads
     private static final ArrayList<MyThread> myThreads = new ArrayList<>();
 
+    //pixel offset for each card
     private static final int[] SHIFT = {143, 215, 287, 358, 430, 492};
 
+    //Path to screenshots
     static String path = "src\\resources\\imgs";
 
     public static void main(String[] args) {
@@ -25,46 +45,47 @@ public class Main {
             String[] images = file.list();
             assert images != null;
             for (String s : images) {
-                flag = 1;
                 try {
                     StringBuilder buffer = new StringBuilder();
                     img_cut = ImageIO.read(new File(file.getPath() + "\\" + s));
                     int i = 0;
                     Color checkColor = new Color(img_cut.getRGB(SHIFT[i] + 42, 600));
 
+                    //check if the card is on the table (card by card)
                     while (checkColor.equals(Color.WHITE) || checkColor.equals(new Color(120, 120, 120))) {
+                        //create new thread to work with 1 card
                         myThreads.add(new MyThread(SHIFT[i], 585, 62, 88, i));
                         myThreads.get(i).start();
                         i++;
+                        //take a new pixel to check
                         checkColor = new Color(img_cut.getRGB(SHIFT[i] + 42, 600));
                     }
 
+                    //form string for console ("file name" - "cards")
                     buffer.append(s).append(" - ");
+                    //waiting for the threads
                     try {
                         for (Thread t : myThreads)
-                                t.join();
+                            t.join();
                     } catch (InterruptedException e) {
                         e.printStackTrace();
                     }
                     synchronized (map) {
-                        if (flag != Math.pow(2, i)) {
-                            try {
-                                Thread.sleep(1);
-                            } catch (InterruptedException e) {
-                                e.printStackTrace();
-                            }
-                        }
                         for (int j = 0; j < i; j++) {
+                            //add to string for console card info
                             buffer.append(map.get(j));
                         }
+                        //print info to console
                         System.out.println(buffer.toString());
+                        //interrupting alive threads
                         for (Thread t : myThreads)
-                        if (t.isAlive())
-                            t.interrupt();
+                            if (t.isAlive())
+                                t.interrupt();
+                        //cleaning thread list
                         myThreads.clear();
                     }
                 } catch (IOException e) {
-                    e.printStackTrace();
+                    System.out.println("Error! File exception.");
                 }
             }
         } catch (NullPointerException e) {
@@ -85,7 +106,7 @@ public class Main {
             int result = 0b0000;
             boolean blackFlag = false;
             boolean suitFlag = false;
-            Color color = new Color(image.getRGB(41, 65));
+            Color color = new Color(image.getRGB(41, 65)); //328,650
             //set color and suit
             if (isBlack(color)) {
                 blackFlag = true;
@@ -128,12 +149,14 @@ public class Main {
                 //check third pixel
                 if (isBlack(color) || isRed(color)) {
                     result += 2;
+                    //get forth pixel
                     color = new Color(image.getRGB(18, 14));
-                    //check forth pixel
                 } else {
+                    //get forth pixel
                     color = new Color(image.getRGB(18, 23));
-                    //check forth pixel
+
                 }
+                //check forth pixel
                 if (isBlack(color) || isRed(color)) {
                     result += 1;
                 }
@@ -152,11 +175,11 @@ public class Main {
             }
             synchronized (map) {
                 getResult(blackFlag, suitFlag, result);
-                flag *= 2;
             }
         }
 
         public synchronized void getResult(boolean blackFlag, boolean suitFlag, int result) {
+            //interpret the result into card info
             switch (result) {
                 case 0 -> buff = "4";
                 case 2 -> buff = "A";
@@ -185,14 +208,14 @@ public class Main {
                     buff += "h";
                 }
             }
+            //put info in the result map
             map.put(Integer.parseInt(this.getName()), this.buff);
-            resMap.put(Integer.parseInt(this.getName()), result);
         }
 
         public static boolean isBlack(Color color) {
             return
-                    (color.getRed() < 130 && color.getGreen() < 130 && color.getBlue() < 130) ||
-                            (color.getRed() == 168 && color.getGreen() == 168 && color.getBlue() == 169);
+                    (color.getRed() < 130 && color.getGreen() < 130 && color.getBlue() < 130)
+                            || (color.getRed() == 168 && color.getGreen() == 168 && color.getBlue() == 169);
         }
 
         public static boolean isRed(Color color) {
