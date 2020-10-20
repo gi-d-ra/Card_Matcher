@@ -10,4 +10,4 @@ Suits:
 * s - spades
 * c - clubs
 
-(All screenshots in the directory /resources/imgs)
+(All screenshots in the directory **/resources/imgs**)
